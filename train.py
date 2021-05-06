@@ -1,9 +1,11 @@
 import argparse
 import logging
 import os
+from functools import partial
 
 import datasets
 import numpy as np
+import torch
 import transformers
 from accelerate import Accelerator
 from datasets import load_dataset, load_metric
@@ -18,8 +20,6 @@ from transformers import (
     get_scheduler,
     set_seed,
 )
-
-from functools import partial
 
 
 class Trainer:
@@ -37,6 +37,7 @@ class Trainer:
         max_steps,
         eval_steps,
         save_steps,
+        log_steps,
         metric_name,
     ):
         self.model = model
@@ -53,6 +54,7 @@ class Trainer:
         self.max_steps = max_steps
         self.eval_steps = eval_steps
         self.save_steps = save_steps
+        self.log_steps = log_steps
 
         self.best_model_checkpoint = None
         self.best_model_score = None
@@ -60,8 +62,7 @@ class Trainer:
         self.metric_name = metric_name
         self.metric = load_metric(self.metric_name)
 
-    def compute_metrics(self, eval_pred):
-        predictions, labels = eval_pred
+    def compute_metrics(self, predictions, labels):
         if self.metric_name in ["accuracy", "f1"]:
             predictions = (predictions > 0.5).astype(int)
 
@@ -76,15 +77,18 @@ class Trainer:
 
     def evaluate(self, dataloader):
         self.model.eval()
+        predictions, labels = [], []
         for step, batch in enumerate(self.dataloader_eval):
             outputs = self.model(**batch)
-            predictions = outputs.logits.argmax(dim=-1)
-            self.metric.add_batch(
-                predictions=self.accelerator.gather(predictions),
-                references=self.accelerator.gather(batch["labels"]),
+            predictions.extend(
+                self.accelerator.gather(torch.sigmoid(outputs.logits))
+                .detach()
+                .view(-1)
+                .tolist()
             )
+            labels.extend(batch["labels"].tolist())
         self.model.train()
-        eval_metric = self.metric.compute()
+        eval_metric = self.compute_metrics(np.array(predictions), labels)
         return eval_metric
 
     def train(self):
@@ -124,6 +128,9 @@ class Trainer:
                 if completed_steps >= self.max_steps:
                     continue_training = False
                     break
+
+                if completed_steps % self.log_steps == 0:
+                    logging.info(f"Step {completed_steps}: loss {loss:.5f}")
 
                 eval_metric = None
                 if (completed_steps > 0) and (completed_steps % self.eval_steps == 0):
@@ -274,6 +281,7 @@ def main(args):
         max_steps=args.max_steps,
         eval_steps=args.eval_steps,
         save_steps=args.save_steps,
+        log_steps=args.log_steps,
         metric_name=args.metric_name,
     )
 
@@ -341,6 +349,9 @@ if __name__ == "__main__":
     )
     train_args.add_argument(
         "--save_steps", type=int, default=500, help="Save model every n steps"
+    )
+    train_args.add_argument(
+        "--log_steps", type=int, default=500, help="Save model every n steps"
     )
     train_args.add_argument(
         "--metric_name",
