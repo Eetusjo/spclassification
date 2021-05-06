@@ -81,15 +81,13 @@ class Trainer:
         for step, batch in enumerate(self.dataloader_eval):
             outputs = self.model(**batch)
             predictions.extend(
-                self.accelerator.gather(torch.sigmoid(outputs.logits))
+                torch.sigmoid(self.accelerator.gather(outputs.logits))
                 .detach()
                 .view(-1)
                 .tolist()
             )
-            print(outputs.loss)
             labels.extend(batch["labels"].tolist())
         self.model.train()
-        print(predictions)
         eval_metric = self.compute_metrics(np.array(predictions), labels)
         return eval_metric
 
@@ -306,7 +304,7 @@ if __name__ == "__main__":
     md_args.add_argument("--cache", default="./tmp")
 
     train_args = parser.add_argument_group("Training")
-    train_args.add_argument("--lr", type=float, default=1e-3, help="Learning rate")
+    train_args.add_argument("--lr", type=float, default=5e-05, help="Learning rate")
     train_args.add_argument(
         "--num_epochs",
         type=int,
