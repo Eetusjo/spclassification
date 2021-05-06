@@ -86,8 +86,10 @@ class Trainer:
                 .view(-1)
                 .tolist()
             )
+            print(outputs.loss)
             labels.extend(batch["labels"].tolist())
         self.model.train()
+        print(predictions)
         eval_metric = self.compute_metrics(np.array(predictions), labels)
         return eval_metric
 
