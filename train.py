@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+from collections import deque
 from functools import partial
 
 import datasets
@@ -113,6 +114,7 @@ class Trainer:
         progress_bar = tqdm(
             range(self.max_steps), disable=not self.accelerator.is_local_main_process
         )
+        losses = deque(maxlen=args.log_steps // 2)
         continue_training, completed_steps = True, 0
         while continue_training:
             self.model.train()
@@ -125,12 +127,16 @@ class Trainer:
                 progress_bar.update(1)
                 completed_steps += 1
 
+                losses.append(loss.item())
+
                 if completed_steps >= self.max_steps:
                     continue_training = False
                     break
 
                 if completed_steps % self.log_steps == 0:
-                    logging.info(f"Step {completed_steps}: loss {loss:.5f}")
+                    logging.info(
+                        f"Step {completed_steps}: train loss {sum(losses)/len(losses):.5f}"
+                    )
 
                 eval_metric = None
                 if (completed_steps > 0) and (completed_steps % self.eval_steps == 0):
