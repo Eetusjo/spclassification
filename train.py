@@ -3,6 +3,7 @@ import logging
 from functools import partial
 
 import datasets
+import numpy as np
 import trainer
 import transformers
 from accelerate import Accelerator
@@ -142,7 +143,7 @@ def main(args):
     metric_accuracy = load_metric("accuracy")
 
     def compute_metrics(predictions, labels):
-        predictions = (predictions > 0.5).astype(int)
+        predictions = np.argmax(predictions, axis=1)
 
         result = metric_accuracy.compute(predictions=predictions, references=labels)
 
