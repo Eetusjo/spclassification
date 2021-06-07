@@ -63,10 +63,7 @@ class Trainer:
         for step, batch in enumerate(self.dataloader_eval):
             outputs = self.model(**batch)
             predictions.extend(
-                torch.sigmoid(self.accelerator.gather(outputs.logits))
-                .detach()
-                .view(-1)
-                .tolist()
+                self.accelerator.gather(outputs.logits).detach().tolist()
             )
             labels.extend(batch["labels"].tolist())
             eval_bar.update(1)

@@ -147,7 +147,7 @@ def main(args):
 
         result = metric_accuracy.compute(predictions=predictions, references=labels)
 
-        for typ in ["macro", "micro", "binary"]:
+        for typ in ["macro", "micro", "weighted"]:
             result[f"f1_{typ}"] = metric_f1.compute(
                 predictions=predictions, references=labels, average=typ
             ).pop("f1")
