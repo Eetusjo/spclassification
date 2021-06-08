@@ -174,6 +174,7 @@ def main(args):
         eval_steps=args.eval_steps,
         save_steps=args.save_steps,
         log_steps=args.log_steps,
+        patience=args.patience,
         metric_name=args.metric_name,
         metric_fn=compute_metrics,
     )

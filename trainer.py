@@ -27,6 +27,7 @@ class Trainer:
         eval_steps,
         save_steps,
         log_steps,
+        patience,
         metric_name,
         metric_fn,
     ):
@@ -46,6 +47,8 @@ class Trainer:
         self.eval_steps = eval_steps
         self.save_steps = save_steps
         self.log_steps = log_steps
+
+        self.patience = patience
 
         self.best_model_checkpoint = None
         self.best_model_score = None
