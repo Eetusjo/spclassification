@@ -31,6 +31,8 @@ def tokenize_data(examples, tokenizer, label2id):
     )
     if type(examples["label"][0]) == int:
         res["labels"] = examples["label"]
+    elif type(examples["label"][0]) == float:
+        res["labels"] = [int(label) for label in examples["label"]]
     else:
         res["labels"] = [label2id[label] for label in examples["label"]]
     return res
@@ -89,6 +91,9 @@ def main(args):
     if type(labels[0]) == str:
         label2id = {label: i for i, label in enumerate(sorted(labels))}
     elif type(labels[0]) == int:
+        label2id = {f"label_{i}": i for i in sorted(labels)}
+    elif type(labels[0]) == float:
+        labels = [int(label) for label in labels]
         label2id = {f"label_{i}": i for i in sorted(labels)}
     num_labels = len(labels)
 

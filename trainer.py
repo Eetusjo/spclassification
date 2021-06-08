@@ -95,6 +95,7 @@ class Trainer:
         )
         losses = deque(maxlen=self.log_steps // 2)
         continue_training, completed_steps = True, 0
+        best_metric, no_improvement = None, 0
         while continue_training:
             self.model.train()
             for step, batch in enumerate(self.dataloader_train):
@@ -125,6 +126,20 @@ class Trainer:
                     logger.info("Evaluating.")
                     eval_metric = self.evaluate(self.dataloader_eval)
                     logger.info(f"Step {completed_steps}: {eval_metric}")
+
+                    if (best_metric is None) or (
+                        eval_metric[self.metric_name] > best_metric
+                    ):
+                        best_metric = eval_metric[self.metric_name]
+                        no_improvement = 0
+                    else:
+                        no_improvement += 1
+                        if no_improvement >= self.patience:
+                            logging.info(
+                                f"Stalled for {no_improvement} times. Exiting training."
+                            )
+                            continue_training = False
+                            break
 
                 if completed_steps % self.save_steps == 0:
                     self.accelerator.wait_for_everyone()
